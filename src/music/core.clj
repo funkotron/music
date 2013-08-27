@@ -1,5 +1,5 @@
 (ns music.core
-(:use
+  (:use
     leipzig.melody
     leipzig.scale
     leipzig.canon
@@ -14,10 +14,28 @@
                      (ektara midi :distort distort :amp amp :gate 1))]
       (overtone/at (+ start length) (overtone/ctl synth-id :gate 0))))
 
+(overtone/definst groan [freq 440 duration 10000 vibrato 8/3]
+  (let [length (/ duration 1000)
+        envelope (* (overtone/sin-osc vibrato)
+                    (overtone/env-gen (overtone/perc 0.1 length) :action overtone/FREE))]
+    (*
+      0.7
+      envelope
+      (+
+        (* (overtone/sin-osc 0.5) (+ 0.1 (overtone/saw freq)))
+        (* (overtone/sin-osc 0.8) (+ -0.03 (overtone/square freq)))
+        (+ -0.04 (overtone/sin-osc freq))))))
+
+(defn puck [distort amp {midi :pitch, start :time, length :duration}]
+    (let [synth-id (overtone/at start
+                     (groan midi :distort distort :amp amp :gate 1))]
+      (overtone/at (+ start length) (overtone/ctl synth-id :gate 0))))
+
+
 (defmethod play-note :leader [note]
-  (pick 5.0 1.0 note))
+  (pick 0.7 1.0 note))
 (defmethod play-note :follower [note]
-  (pick 0.3 1.0 note))
+  (puck 0.3 1.0 note))
 (defmethod play-note :bass [note]
   (pick 0.9 0.2 (update-in note [:pitch] #(- % 12))))
 
@@ -38,6 +56,7 @@
        (phrase [2/3 1/3 2/3 1/3 6/3]
                [ 4 3 2 1 0]))
     (where :part (is :leader))))
+
 
 (def bass "A bass part to accompany the melody."
   (->> (phrase [1 1 1 1/4 1/4 1/4 1/4]
@@ -67,5 +86,5 @@
 
 (comment
   (row-row (bpm 120) (comp C sharp major))
-  (row-row (bpm 90) (comp low B flat minor))
+  (row-row (bpm 100) (comp low B flat minor))
 )
